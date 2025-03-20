@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Muerte del Costeño</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        #victory {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px;
+            display: none;
+        }
+        #backgroundText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            color: rgba(255, 0, 0, 0.3);
+            font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="info">
+        Nivel: <span id="level">1</span> | Puntos: <span id="score">0</span> | Vida: <span id="life">5</span>
+    </div>
+
+    <div id="backgroundText">LLUVIA COSTEÑA, la muerte</div>
+
+    <div id="victory">
+        <h1>¡Ganaste!</h1>
+        <p>La pista es: <strong>JIRA, Selenium, JUnit, SonarQube y Jenkins</strong></p>
+        <button onclick="resetGame()">Volver a jugar</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let life = 5;
+        let level = 1;
+        let enemies = [];
+        let bullets = [];
+        let mouseX = canvas.width / 2;
+
+        // Imágenes personalizables
+        const playerImg = new Image();
+        playerImg.src = 'player.png';  // Imagen del jugador
+
+        const enemyImg = new Image();
+        enemyImg.src = 'enemy.png';  // Imagen del enemigo
+
+        const player = {
+            x: mouseX,
+            y: canvas.height - 100,
+            width: 50,
+            height: 50
+        };
+
+        function createEnemy() {
+            return {
+                x: Math.random() * (canvas.width - 70),
+                y: Math.random() * 100,
+                width: 70,
+                height: 70,
+                dy: 0.5 + level * 0.4  // Velocidad más baja pero progresiva
+            };
+        }
+
+        function drawPlayer() {
+            ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.drawImage(enemyImg, enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                enemy.y += enemy.dy;
+                if (enemy.y > canvas.height) {
+                    enemies.splice(index, 1);
+                    life--;
+                    updateUI();
+                    if (life <= 0) gameOver();
+                }
+            });
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = "yellow";
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, 5, 15);
+            });
+        }
+
+        function updateBullets() {
+            bullets.forEach((bullet, index) => {
+                bullet.y -= 5;
+                if (bullet.y < 0) bullets.splice(index, 1);
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (
+                        bullet.x >= enemy.x &&
+                        bullet.x <= enemy.x + enemy.width &&
+                        bullet.y <= enemy.y + enemy.height
+                    ) {
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        score += 10;
+                        updateUI();
+                    }
+                });
+            });
+
+            if (enemies.length === 0) nextLevel();
+        }
+
+        function nextLevel() {
+            if (level < 5) {
+                level++;
+                for (let i = 0; i < level + 2; i++) enemies.push(createEnemy());
+                updateUI();
+            } else {
+                document.getElementById("victory").style.display = "block";
+            }
+        }
+
+        function updateUI() {
+            document.getElementById("level").innerText = level;
+            document.getElementById("score").innerText = score;
+            document.getElementById("life").innerText = life;
+        }
+
+        function gameOver() {
+            alert("¡Perdiste! Puntos: " + score);
+            resetGame();
+        }
+
+        function resetGame() {
+            score = 0;
+            life = 5;
+            level = 1;
+            enemies = [createEnemy(), createEnemy()];
+            bullets = [];
+            updateUI();
+            document.getElementById("victory").style.display = "none";
+        }
+
+        // Movimiento con el mouse
+        document.addEventListener("mousemove", (e) => {
+            player.x = e.clientX - player.width / 2;
+        });
+
+        canvas.addEventListener("click", () => {
+            bullets.push({ x: player.x + player.width / 2, y: player.y });
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawEnemies();
+            updateEnemies();
+            drawBullets();
+            updateBullets();
+            checkCollisions();
+            requestAnimationFrame(gameLoop);
+        }
+
+        enemies.push(createEnemy(), createEnemy());
+        gameLoop();
+    </script>
+</body>
+</html>
